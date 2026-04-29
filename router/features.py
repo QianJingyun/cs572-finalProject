@@ -16,8 +16,12 @@ Feature vector layout (index → name):
 """
 
 import re
+import sys
+from pathlib import Path
 import numpy as np
 from rank_bm25 import BM25Okapi
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 # Matches DrugBank IDs like DB00773
@@ -60,13 +64,23 @@ def extract_features(example: dict) -> np.ndarray:
         if len(scores_sorted) >= 2 else 0.0
     )
 
+    # Entropy over top-5 BM25 scores: high entropy = evidence spread across passages
+    # (more likely to need multi-hop); low entropy = one passage dominates (single-hop)
+    top5 = np.array(scores_sorted[:5], dtype=np.float64)
+    if top5.sum() > 0:
+        p = top5 / top5.sum()
+        top5_bm25_entropy = float(-np.sum(p * np.log(p + 1e-12)))
+    else:
+        top5_bm25_entropy = 0.0
+
     # How many candidates appear anywhere in the supports (lowercased search)
     combined_supports = " ".join(supports).lower()
     hits = sum(1 for c in candidates if c.lower() in combined_supports)
     candidates_in_supports = hits / n_candidates if n_candidates > 0 else 0.0
 
     return np.array(
-        [n_supports, n_candidates, top_bm25_score, bm25_score_gap, candidates_in_supports],
+        [n_supports, n_candidates, top_bm25_score, bm25_score_gap,
+         candidates_in_supports, top5_bm25_entropy],
         dtype=np.float32,
     )
 
@@ -77,6 +91,7 @@ FEATURE_NAMES = [
     "top_bm25_score",
     "bm25_score_gap",
     "candidates_in_supports",
+    "top5_bm25_entropy",
 ]
 
 

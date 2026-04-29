@@ -13,14 +13,22 @@ Usage: python evaluate.py
 import json
 import pickle
 import os
+import sys
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from datasets import load_dataset
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
 
+# Allow bare imports (features, label, train) regardless of CWD,
+# and also allow importing eval_harness from the repo root.
+sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from features import extract_features, FEATURE_NAMES
 from label import bm25_answer_score
 from train import build_feature_matrix
+from eval_harness.runner import append_to_leaderboard
 
 
 RESULTS_DIR = "results"
@@ -120,6 +128,21 @@ def main():
     with open("results.json", "w") as f:
         json.dump(results, f, indent=2)
     print("Saved results → results.json")
+
+    # Write to the shared top-level leaderboard so our numbers appear alongside
+    # the retriever and reranker results from teammates.
+    run_name = f"lr_{len(FEATURE_NAMES)}feat_v1"
+    append_to_leaderboard("router", run_name, {
+        "accuracy": round(acc_clf, 4),
+        "accuracy_always_multi_baseline": round(acc_base_multi, 4),
+        "improvement_pp": round((acc_clf - max(acc_base_multi, acc_base_single)) * 100, 2),
+        "n_val": int(len(y_val)),
+        "feature_importances": {
+            name: round(float(coef), 4)
+            for name, coef in zip(FEATURE_NAMES, clf.named_steps["lr"].coef_[0])
+        },
+    })
+    print(f"Appended to top-level results.json under 'router' > '{run_name}'")
 
 
 if __name__ == "__main__":

@@ -62,5 +62,46 @@
       "map": 0.3352225166338131,
       "mrr": 0.3446244185072196
     }
+  },
+  "router": {
+    "lr_6feat_v1": {
+      "accuracy": 0.6842,
+      "accuracy_always_multi_baseline": 0.6257,
+      "improvement_pp": 5.85,
+      "n_val": 342,
+      "feature_importances": {
+        "n_supports": -0.9623,
+        "n_candidates": -0.0028,
+        "top_bm25_score": 0.1242,
+        "bm25_score_gap": 0.1068,
+        "candidates_in_supports": 0.0,
+        "top5_bm25_entropy": 0.1862
+      }
+    }
+  },
+  "router_e2e": {
+    "always_single": {
+      "recall@1": 0.0351,
+      "recall@5": 0.3538,
+      "recall@10": 0.6023,
+      "n_examples": 342,
+      "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    },
+    "always_multi": {
+      "recall@1": 0.0351,
+      "recall@5": 0.3538,
+      "recall@10": 0.6053,
+      "n_examples": 342,
+      "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    },
+    "routed_lr_6feat_v1": {
+      "recall@1": 0.0351,
+      "recall@5": 0.3538,
+      "recall@10": 0.6053,
+      "n_examples": 342,
+      "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+      "n_single": 84,
+      "n_multi": 258
+    }
   }
 }
