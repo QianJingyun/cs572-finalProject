@@ -13,13 +13,15 @@ would fall back to predict_multi() or use only n_candidates as a proxy.
 """
 
 import pickle
+from pathlib import Path
+
 import numpy as np
 
 from features import extract_features
 
 
 # Load the trained model once at import time
-_MODEL_PATH = "model.pkl"
+_MODEL_PATH = Path(__file__).parent / "model.pkl"
 try:
     with open(_MODEL_PATH, "rb") as _f:
         _clf = pickle.load(_f)

@@ -1,0 +1,12 @@
+# Agent + Integration dependencies (Person D)
+# Python 3.10+
+# Install from repo root: pip install -r agent/requirements.txt
+
+# Azure OpenAI (only needed for --generator azure)
+openai>=1.30.0
+
+# Auto-load .env file
+python-dotenv>=1.0.0
+
+# Already installed via retriever/reranker requirements:
+# datasets, torch, sentence-transformers, numpy, tqdm, rank-bm25

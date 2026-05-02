@@ -1,1 +1,5 @@
 reranker/checkpoints/
+retriever/checkpoints/
+retriever/data/
+router/model.pkl
+.env

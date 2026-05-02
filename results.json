@@ -62,5 +62,34 @@
       "map": 0.3352225166338131,
       "mrr": 0.3446244185072196
     }
+  },
+  "end_to_end": {
+    "heuristic_router": {
+      "exact_match": 0.3333,
+      "n_examples": 3,
+      "n_correct": 1,
+      "avg_hops": 2.0,
+      "early_stop_rate": 0.3333,
+      "single_hop_em": 1.0,
+      "multi_hop_em": 0.0,
+      "n_single": 1,
+      "n_multi": 2,
+      "generator": "heuristic",
+      "use_router": true
+    },
+    "closed_heuristic_router": {
+      "exact_match": 0.3333,
+      "n_examples": 3,
+      "n_correct": 1,
+      "avg_hops": 2.0,
+      "early_stop_rate": 0.3333,
+      "single_hop_em": 1.0,
+      "multi_hop_em": 0.0,
+      "n_single": 1,
+      "n_multi": 2,
+      "generator": "heuristic",
+      "eval_mode": "closed",
+      "use_router": true
+    }
   }
 }
