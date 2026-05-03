@@ -5,7 +5,7 @@ All features come from support passages + candidates because the MedHop
 query text is always exactly "interacts_with DBXXXXX?" — no text signal there.
 
 Public API used by train.py and router.py:
-    extract_features(example: dict) -> np.ndarray  (shape: [5])
+    extract_features(example: dict) -> np.ndarray  (shape: [6])
 
 Feature vector layout (index → name):
     0  n_supports               number of support passages
@@ -13,11 +13,24 @@ Feature vector layout (index → name):
     2  top_bm25_score           BM25 score of best passage for the query drug ID
     3  bm25_score_gap           top_bm25_score minus second-best score (0 if only one passage)
     4  candidates_in_supports   fraction of candidates appearing in any support passage
+    5  entity_count             biomedical entities in query (via scispacy NER)
 """
 
 import re
 import numpy as np
 from rank_bm25 import BM25Okapi
+
+try:
+    import spacy
+    NLP = spacy.load("en_core_sci_sm")
+except (ImportError, OSError):
+    print(
+        "Warning: scispacy not found or en_core_sci_sm model missing.\n"
+        "Install with:\n"
+        "  pip install scispacy\n"
+        "  pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_sm-0.5.4.tar.gz"
+    )
+    NLP = None
 
 
 # Matches DrugBank IDs like DB00773
@@ -38,11 +51,12 @@ def _extract_query_drug(query: str) -> str:
 def extract_features(example: dict) -> np.ndarray:
     """
     example is one MedHop dict with keys: query, supports, candidates, answer, id.
-    Returns a float32 array of shape (5,).
+    Returns a float32 array of shape (6,).
     """
     query_drug = _extract_query_drug(example["query"])
     supports   = example["supports"]     # list of strings
     candidates = example["candidates"]   # list of DrugBank ID strings
+    query      = example["query"]        # for entity extraction
 
     n_supports   = len(supports)
     n_candidates = len(candidates)
@@ -65,8 +79,14 @@ def extract_features(example: dict) -> np.ndarray:
     hits = sum(1 for c in candidates if c.lower() in combined_supports)
     candidates_in_supports = hits / n_candidates if n_candidates > 0 else 0.0
 
+    # Entity count from scispacy NER
+    entity_count = 0.0
+    if NLP is not None:
+        doc = NLP(query)
+        entity_count = float(len(doc.ents))
+
     return np.array(
-        [n_supports, n_candidates, top_bm25_score, bm25_score_gap, candidates_in_supports],
+        [n_supports, n_candidates, top_bm25_score, bm25_score_gap, candidates_in_supports, entity_count],
         dtype=np.float32,
     )
 
@@ -77,6 +97,7 @@ FEATURE_NAMES = [
     "top_bm25_score",
     "bm25_score_gap",
     "candidates_in_supports",
+    "entity_count",
 ]
 
 

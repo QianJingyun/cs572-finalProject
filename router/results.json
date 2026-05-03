@@ -1,5 +1,9 @@
 {
+  "threshold": 0.5,
   "validation_accuracy_classifier": 0.693,
+  "validation_precision_classifier": 0.7104,
+  "validation_recall_classifier": 0.8598,
+  "validation_f1_classifier": 0.778,
   "validation_accuracy_always_multi_baseline": 0.6257,
   "validation_accuracy_always_single_baseline": 0.3743,
   "improvement_over_best_baseline": 0.0673,
@@ -7,11 +11,12 @@
   "val_pct_hard": 0.6257,
   "train_bm25_median": 3.4898,
   "feature_importances": {
-    "n_supports": -0.8905,
-    "n_candidates": -0.0047,
-    "top_bm25_score": 0.1351,
-    "bm25_score_gap": -0.0201,
-    "candidates_in_supports": 0.0
+    "n_supports": -0.9014,
+    "n_candidates": -0.0061,
+    "top_bm25_score": 0.1379,
+    "bm25_score_gap": -0.0278,
+    "candidates_in_supports": 0.0,
+    "entity_count": -0.0828
   },
   "confusion_matrix": [
     [

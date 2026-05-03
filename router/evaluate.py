@@ -16,7 +16,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from datasets import load_dataset
-from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
 
 from features import extract_features, FEATURE_NAMES
 from label import bm25_answer_score
@@ -59,6 +59,9 @@ def main():
     # Classifier predictions
     y_pred_clf = clf.predict(X_val)
     acc_clf = accuracy_score(y_val, y_pred_clf)
+    prec_clf = precision_score(y_val, y_pred_clf)
+    rec_clf = recall_score(y_val, y_pred_clf)
+    f1_clf = f1_score(y_val, y_pred_clf)
 
     # Baselines
     y_pred_multi  = np.ones_like(y_val)
@@ -66,8 +69,11 @@ def main():
     acc_base_multi  = accuracy_score(y_val, y_pred_multi)
     acc_base_single = accuracy_score(y_val, y_pred_single)
 
-    print(f"\n--- Results ---")
+    print(f"\n--- Results (Threshold = 0.5) ---")
     print(f"  Classifier accuracy:      {acc_clf*100:.1f}%")
+    print(f"  Classifier precision:     {prec_clf*100:.1f}%")
+    print(f"  Classifier recall:        {rec_clf*100:.1f}%")
+    print(f"  Classifier F1:            {f1_clf*100:.1f}%")
     print(f"  Always-multi baseline:    {acc_base_multi*100:.1f}%")
     print(f"  Always-single baseline:   {acc_base_single*100:.1f}%")
     print(f"  Improvement over best baseline: {(acc_clf - max(acc_base_multi, acc_base_single))*100:+.1f}%")
@@ -104,7 +110,11 @@ def main():
 
     # Save all results to JSON
     results = {
+        "threshold": 0.5,
         "validation_accuracy_classifier": round(acc_clf, 4),
+        "validation_precision_classifier": round(prec_clf, 4),
+        "validation_recall_classifier": round(rec_clf, 4),
+        "validation_f1_classifier": round(f1_clf, 4),
         "validation_accuracy_always_multi_baseline": round(acc_base_multi, 4),
         "validation_accuracy_always_single_baseline": round(acc_base_single, 4),
         "improvement_over_best_baseline": round(acc_clf - max(acc_base_multi, acc_base_single), 4),
