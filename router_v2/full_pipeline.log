@@ -1,0 +1,4 @@
+  File "/Users/qjy/Emory/2026spring/CS 572/cs572-finalProject/router_v2/run_phases_2_and_3.sh", line 4
+    echo "Waiting for Phase 1 (label generation) to complete..."
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: invalid syntax
