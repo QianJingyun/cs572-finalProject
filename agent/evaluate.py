@@ -56,6 +56,22 @@ def _load_val():
     return ds["validation"]
 
 
+def _make_generators(config: AgentConfig):
+    """Create per-worker Azure generators from .env endpoints. Returns [] for heuristic."""
+    if config.generator not in ("azure", "graph_llm"):
+        return []
+    from agent.endpoints import load_endpoints
+    from agent.generator import AzureOpenAIGenerator
+    endpoints = load_endpoints()
+    if not endpoints:
+        raise RuntimeError(
+            "No Azure endpoints found. Set AZURE_API_KEY_{1..N}_GPT41 / "
+            "AZURE_API_BASE_{1..N}_GPT41 in .env, or the legacy "
+            "AZURE_OPENAI_API_KEY / AZURE_OPENAI_ENDPOINT."
+        )
+    return [AzureOpenAIGenerator.from_endpoint(ep) for ep in endpoints]
+
+
 def run_evaluation(
     val_split,
     config: AgentConfig,
@@ -68,14 +84,37 @@ def run_evaluation(
     from eval_harness.metrics import exact_match
 
     n = min(len(val_split), max_examples) if max_examples else len(val_split)
-    results = []
 
-    for i in tqdm(range(n), desc="Evaluating"):
-        out = run_pipeline(
-            val_split[i], config=config, use_router=use_router,
-            reranker=reranker, retriever_fn=retriever_fn,
-        )
-        results.append(out)
+    generators = _make_generators(config)
+
+    if generators and len(generators) > 1:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        n_workers = len(generators)
+        print(f"  Parallel evaluation: {n_workers} workers")
+
+        def _process(idx):
+            gen = generators[idx % n_workers]
+            return run_pipeline(
+                val_split[idx], config=config, use_router=use_router,
+                reranker=reranker, retriever_fn=retriever_fn, generator=gen,
+            )
+
+        results = [None] * n
+        with ThreadPoolExecutor(max_workers=n_workers) as pool:
+            futures = {pool.submit(_process, i): i for i in range(n)}
+            for fut in tqdm(as_completed(futures), total=n, desc="Evaluating"):
+                idx = futures[fut]
+                results[idx] = fut.result()
+    else:
+        gen = generators[0] if generators else None
+        results = []
+        for i in tqdm(range(n), desc="Evaluating"):
+            out = run_pipeline(
+                val_split[i], config=config, use_router=use_router,
+                reranker=reranker, retriever_fn=retriever_fn, generator=gen,
+            )
+            results.append(out)
 
     em_scores = [exact_match(r["prediction"], r["gold"]) for r in results]
     em = sum(em_scores) / len(em_scores)
@@ -168,11 +207,47 @@ def run_ablations(val_split, reranker, retriever_fn, max_examples: int | None = 
 
     # --- LLM ablations (require API key) ---
 
-    if os.environ.get("AZURE_OPENAI_API_KEY") and os.environ.get("AZURE_OPENAI_ENDPOINT"):
+    from agent.endpoints import load_endpoints
+    if load_endpoints():
         mode = "open" if has_retriever else "closed"
         rtr = retriever_fn if has_retriever else None
 
-        print(f"\n=== {mode.title()}-domain: Azure OpenAI, no router ===")
+        # --- Graph-guided LLM ablations ---
+
+        print(f"\n=== {mode.title()}-domain: Graph+LLM, with router ===")
+        cfg_graph = AgentConfig(generator="graph_llm", eval_mode=mode, max_hops=3)
+        ablations["graph_llm_with_router"] = run_evaluation(
+            val_split, cfg_graph, use_router=True, max_examples=max_examples,
+            reranker=reranker, retriever_fn=rtr,
+        )
+        append_to_leaderboard("end_to_end", "graph_llm_with_router", ablations["graph_llm_with_router"])
+
+        print(f"\n=== {mode.title()}-domain: Graph+LLM, no router ===")
+        ablations["graph_llm_no_router"] = run_evaluation(
+            val_split, cfg_graph, use_router=False, max_examples=max_examples,
+            reranker=reranker, retriever_fn=rtr,
+        )
+        append_to_leaderboard("end_to_end", "graph_llm_no_router", ablations["graph_llm_no_router"])
+
+        print(f"\n=== {mode.title()}-domain: Graph+LLM, single-hop ===")
+        cfg_graph_single = AgentConfig(generator="graph_llm", eval_mode=mode, max_hops=1)
+        ablations["graph_llm_single"] = run_evaluation(
+            val_split, cfg_graph_single, use_router=False, max_examples=max_examples,
+            reranker=reranker, retriever_fn=rtr,
+        )
+        append_to_leaderboard("end_to_end", "graph_llm_single", ablations["graph_llm_single"])
+
+        # --- Standard LLM ablations ---
+
+        print(f"\n=== {mode.title()}-domain: Azure OpenAI, single-hop ===")
+        cfg_llm_single = AgentConfig(generator="azure", eval_mode=mode, max_hops=1)
+        ablations["llm_single"] = run_evaluation(
+            val_split, cfg_llm_single, use_router=False, max_examples=max_examples,
+            reranker=reranker, retriever_fn=rtr,
+        )
+        append_to_leaderboard("end_to_end", "llm_single", ablations["llm_single"])
+
+        print(f"\n=== {mode.title()}-domain: Azure OpenAI, multi-hop (no router) ===")
         cfg_llm = AgentConfig(generator="azure", eval_mode=mode, max_hops=3)
         ablations["llm_no_router"] = run_evaluation(
             val_split, cfg_llm, use_router=False, max_examples=max_examples,
@@ -187,14 +262,14 @@ def run_ablations(val_split, reranker, retriever_fn, max_examples: int | None = 
         )
         append_to_leaderboard("end_to_end", "llm_with_router", ablations["llm_with_router"])
     else:
-        print("\nSkipping Azure OpenAI ablations (AZURE_OPENAI_API_KEY / AZURE_OPENAI_ENDPOINT not set)")
+        print("\nSkipping Azure OpenAI ablations (no Azure endpoints found in .env)")
 
     return ablations
 
 
 def main():
     parser = argparse.ArgumentParser(description="End-to-end MedHop evaluation")
-    parser.add_argument("--generator", choices=["heuristic", "azure"], default="heuristic")
+    parser.add_argument("--generator", choices=["heuristic", "azure", "graph_llm"], default="heuristic")
     parser.add_argument("--no_router", action="store_true")
     parser.add_argument("--max_hops", type=int, default=3)
     parser.add_argument("--max_examples", type=int, default=None)

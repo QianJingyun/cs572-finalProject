@@ -12,6 +12,7 @@ def run_pipeline(
     use_router: bool = True,
     reranker=None,
     retriever_fn=None,
+    generator=None,
 ) -> dict:
     """
     Run the full pipeline on one MedHop example.
@@ -19,6 +20,7 @@ def run_pipeline(
     Args:
         retriever_fn: Callable(query, k=int) -> list[str]. Passed through to the
                       agent for open-domain mode. Ignored in closed-domain mode.
+        generator:    Pre-built generator instance. Passed through to the agent.
 
     Returns dict with prediction, gold, correctness, and diagnostics.
     """
@@ -37,17 +39,32 @@ def run_pipeline(
     else:
         hop_decision = "multi"
 
-    from .agent import run_agent
+    if config.generator == "graph_llm":
+        from .agent import run_graph_agent
 
-    result = run_agent(
-        query=query,
-        candidates=candidates,
-        supports=supports,
-        config=config,
-        hop_decision=hop_decision,
-        reranker=reranker,
-        retriever_fn=retriever_fn,
-    )
+        result = run_graph_agent(
+            query=query,
+            candidates=candidates,
+            supports=supports,
+            config=config,
+            hop_decision=hop_decision,
+            reranker=reranker,
+            retriever_fn=retriever_fn,
+            generator=generator,
+        )
+    else:
+        from .agent import run_agent
+
+        result = run_agent(
+            query=query,
+            candidates=candidates,
+            supports=supports,
+            config=config,
+            hop_decision=hop_decision,
+            reranker=reranker,
+            retriever_fn=retriever_fn,
+            generator=generator,
+        )
 
     return {
         "id": example["id"],

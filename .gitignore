@@ -1,5 +1,7 @@
 reranker/checkpoints/
+reranker/checkpoints.zip
 retriever/checkpoints/
 retriever/data/
 router/model.pkl
 .env
+.venv/
