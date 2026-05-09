@@ -1,3 +1,4 @@
+__pycache__/
 reranker/checkpoints/
 reranker/checkpoints.zip
 retriever/checkpoints/

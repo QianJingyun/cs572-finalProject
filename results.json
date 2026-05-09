@@ -202,6 +202,27 @@
       "generator": "graph_llm",
       "eval_mode": "closed",
       "use_router": true
+    },
+    "bm25_only_baseline": {
+      "exact_match": 0.1374,
+      "n_examples": 342,
+      "n_correct": 47,
+      "recall@1": 0.1374,
+      "recall@3": 0.4737,
+      "recall@5": 0.6959,
+      "method": "bm25_candidate_ranking",
+      "eval_mode": "closed"
+    },
+    "zero_shot_reranker_heuristic": {
+      "exact_match": 0.152,
+      "n_examples": 342,
+      "n_correct": 52,
+      "recall@1": 0.193,
+      "recall@3": 0.4503,
+      "recall@5": 0.6316,
+      "generator": "heuristic",
+      "eval_mode": "closed",
+      "reranker": "cross-encoder/ms-marco-MiniLM-L-6-v2 (zero-shot)"
     }
   },
   "candidate_ranking": {
@@ -224,6 +245,16 @@
       "recall@1": 0.1111,
       "recall@3": 0.3333,
       "recall@5": 0.5556
+    },
+    "bm25_only": {
+      "recall@1": 0.1374,
+      "recall@3": 0.4737,
+      "recall@5": 0.6959
+    },
+    "zero_shot_reranker": {
+      "recall@1": 0.193,
+      "recall@3": 0.4503,
+      "recall@5": 0.6316
     }
   }
 }
